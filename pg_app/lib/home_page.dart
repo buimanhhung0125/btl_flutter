@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'main.dart';
 import 'customer_notes_page.dart';
+import 'package:flutter/services.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -25,20 +26,18 @@ class _HomePageState extends State<HomePage> {
 
     final data = jsonDecode(response.body);
 
-    if (data['status'] == 'success') {
-      setState(() {
+    setState(() {
+      if (data['status'] == 'success') {
         customerInfo = data['customer'];
         orders = data['orders'];
-      });
-    } else {
-      setState(() {
+      } else {
         customerInfo = null;
         orders = [];
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không tìm thấy khách hàng')),
-      );
-    }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không tìm thấy khách hàng')),
+        );
+      }
+    });
   }
 
   Future<void> _logout() async {
@@ -62,22 +61,30 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: <Widget>[
-            TextField(
-              controller: phoneController,
-              decoration: InputDecoration(labelText: 'Nhập số điện thoại'),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _fetchCustomerInfo(phoneController.text),
-              child: Text('Tìm kiếm'),
-            ),
-            SizedBox(height: 20),
-            customerInfo != null ? _buildCustomerInfo() : Text('Không có dữ liệu khách hàng'),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: <Widget>[
+              TextField(
+                controller: phoneController,
+                decoration: InputDecoration(labelText: 'Nhập số điện thoại'),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  _fetchCustomerInfo(phoneController.text);
+                },
+                child: Text('Tìm kiếm'),
+              ),
+              SizedBox(height: 20),
+              customerInfo != null
+                  ? _buildCustomerInfo()
+                  : Text('Không có dữ liệu khách hàng'),
+            ],
+          ),
         ),
       ),
     );
@@ -96,21 +103,17 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       },
-      child: Expanded(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text('Tên: ${customerInfo!['tenkh']}'),
-              Text('Số điện thoại: ${customerInfo!['sdt']}'),
-              Text('Ngày sinh: ${customerInfo!['ngaysinh']}'),
-              Text('Địa chỉ: ${customerInfo!['diachi']}'),
-              SizedBox(height: 20),
-              Text('Lịch sử mua hàng:'),
-              _buildOrdersTable(),
-            ],
-          ),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Tên: ${customerInfo!['tenkh']}'),
+          Text('Số điện thoại: ${customerInfo!['sdt']}'),
+          Text('Ngày sinh: ${customerInfo!['ngaysinh']}'),
+          Text('Địa chỉ: ${customerInfo!['diachi']}'),
+          SizedBox(height: 20),
+          Text('Lịch sử mua hàng:'),
+          _buildOrdersTable(),
+        ],
       ),
     );
   }
@@ -122,16 +125,12 @@ class _HomePageState extends State<HomePage> {
         columns: [
           DataColumn(label: Text('Tên SP')),
           DataColumn(label: Text('SL')),
-          // DataColumn(label: Text('Giá')),
-          // DataColumn(label: Text('Tổng')),
           DataColumn(label: Text('Ngày mua')),
         ],
         rows: orders.map((order) {
           return DataRow(cells: [
             DataCell(Text(order['tensp'].toString())),
             DataCell(Text(order['soluong'].toString())),
-            // DataCell(Text(order['gia'].toString())),
-            // DataCell(Text(order['thanhtien'].toString())),
             DataCell(Text(order['ngaymua'])),
           ]);
         }).toList(),

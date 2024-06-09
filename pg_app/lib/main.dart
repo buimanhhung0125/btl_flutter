@@ -64,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Email hoặc mật khẩu không đúng')),
+        SnackBar(content: Text('Tài khoản hoặc mật khẩu không đúng')),
       );
     }
   }

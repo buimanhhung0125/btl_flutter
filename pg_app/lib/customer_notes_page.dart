@@ -36,7 +36,6 @@ class _CustomerNotesPageState extends State<CustomerNotesPage> {
     );
 
     final data = jsonDecode(response.body);
-    // final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
 
     setState(() {
       notes = data['notes'];
@@ -56,18 +55,54 @@ class _CustomerNotesPageState extends State<CustomerNotesPage> {
     final data = jsonDecode(response.body);
 
     if (data['status'] == 'success') {
-      setState(() {
-        notes.add(data['note']);
-        noteController.clear();
-      });
+      noteController.clear();
+      _fetchNotes();
+    } else {
+      // Hiển thị thông báo lỗi
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Thêm ghi chú thất bại')),
+      );
     }
   }
 
-  Future<void> _updateNote(int noteId, String updatedNote) async {
+  Future<void> _updateNoteDialog(int noteId, String currentNote) async {
+    TextEditingController editController = TextEditingController(text: currentNote);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Sửa ghi chú'),
+          content: TextField(
+            controller: editController,
+            decoration: InputDecoration(labelText: 'Ghi chú'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final updatedNote = editController.text;
+                await _updateNote(noteId.toString(), updatedNote); // Chuyển đổi noteId sang String
+                Navigator.of(context).pop();
+                _fetchNotes();
+              },
+              child: Text('Lưu'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateNote(String noteId, String updatedNote) async { // Đổi kiểu dữ liệu của noteId sang String
     final response = await http.post(
       Uri.parse('http://buimanhhung.id.vn/edit_note.php'),
       body: {
-        'note_id': noteId.toString(),
+        'note_id': noteId, // noteId đã được chuyển đổi sang String
         'note': updatedNote,
       },
     );
@@ -75,29 +110,60 @@ class _CustomerNotesPageState extends State<CustomerNotesPage> {
     final data = jsonDecode(response.body);
 
     if (data['status'] == 'success') {
-      setState(() {
-        final index = notes.indexWhere((note) => note['id'] == noteId);
-        if (index != -1) {
-          notes[index]['note'] = updatedNote;
-        }
-      });
+      _fetchNotes();
+    } else {
+      // Hiển thị thông báo lỗi
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cập nhật ghi chú thất bại')),
+      );
     }
   }
 
-  Future<void> _deleteNote(int noteId) async {
+  Future<void> _deleteNoteDialog(int noteId) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Xóa ghi chú'),
+          content: Text('Bạn có chắc chắn muốn xóa ghi chú này không?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await _deleteNote(noteId.toString()); // Chuyển đổi noteId sang String
+                Navigator.of(context).pop();
+                _fetchNotes();
+              },
+              child: Text('Xóa'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteNote(String noteId) async { // Đổi kiểu dữ liệu của noteId sang String
     final response = await http.post(
       Uri.parse('http://buimanhhung.id.vn/delete_note.php'),
       body: {
-        'note_id': noteId.toString(),
+        'note_id': noteId, // noteId đã được chuyển đổi sang String
       },
     );
 
     final data = jsonDecode(response.body);
 
     if (data['status'] == 'success') {
-      setState(() {
-        notes.removeWhere((note) => note['id'] == noteId);
-      });
+      _fetchNotes();
+    } else {
+      // Hiển thị thông báo lỗi
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Xóa ghi chú thất bại')),
+      );
     }
   }
 
@@ -106,21 +172,24 @@ class _CustomerNotesPageState extends State<CustomerNotesPage> {
       itemCount: notes.length,
       itemBuilder: (context, index) {
         final note = notes[index];
-        TextEditingController editController =
-            TextEditingController(text: note['noidung']);
         return ListTile(
-          title: TextField(
-            controller: editController,
-            decoration: InputDecoration(border: InputBorder.none),
-            onSubmitted: (newValue) {
-              _updateNote(note['id'], newValue);
-            },
-          ),
-          trailing: IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () {
-              _deleteNote(note['id']);
-            },
+          title: Text(note['noidung']),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.edit),
+                onPressed: () {
+                  _updateNoteDialog(int.parse(note['id']), note['noidung']); // Chuyển đổi note['id'] sang int
+                },
+              ),
+              IconButton(
+                icon: Icon(Icons.delete),
+                onPressed: () {
+                  _deleteNoteDialog(int.parse(note['id'])); // Chuyển đổi note['id'] sang int
+                },
+              ),
+            ],
           ),
         );
       },
